@@ -144,6 +144,7 @@ lazy val sapi = Project("daffodil-sapi", file("daffodil-sapi"))
 lazy val tdmlLib = Project("daffodil-tdml-lib", file("daffodil-tdml-lib"))
   .dependsOn(macroLib % "compile-internal", lib, io, io % "test->test", slf4jLogger % "test")
   .settings(commonSettings)
+  .settings(xjcSettings)
 
 lazy val tdmlProc = Project("daffodil-tdml-processor", file("daffodil-tdml-processor"))
   .dependsOn(tdmlLib, codeGenC, core, slf4jLogger)
@@ -211,6 +212,43 @@ lazy val testStdLayout = Project("daffodil-test-stdLayout", file("test-stdLayout
   .dependsOn(tdmlProc % "test")
   .settings(commonSettings, nopublish)
 
+/* Workaround: certain reflection (used by JAXB) isn't allowed by default in JDK 17:
+ * https://docs.oracle.com/en/java/javase/17/migrate/migrating-jdk-8-later-jdk-releases.html#GUID-7BB28E4D-99B3-4078-BDC4-FC24180CE82B
+ *
+ * While we can handle this JVM quirk at build time, at runtime we won't know
+ * a user's JVM version. We'll provide documentation and an extension setting
+ * to add these flags to the extension-launched debugger backend.
+ */
+lazy val extraJvmOptions: Seq[String] =
+  if (scala.util.Properties.isJavaAtLeast("17"))
+    Seq(
+      "--add-opens",
+      "java.base/java.lang=ALL-UNNAMED",
+    )
+  else Seq()
+
+lazy val xjcSettings =
+  Seq(
+    libraryDependencies ++= Seq(
+      "com.sun.xml.bind" % "jaxb-impl" % "2.2.11",
+      "javax.activation" % "activation" % "1.1.1",
+      "org.glassfish.jaxb" % "jaxb-xjc" % "2.2.11",
+    ),
+    xjcCommandLine += "-nv",
+    xjcCommandLine += "-p",
+    xjcCommandLine += "org.apache.daffodil.tdml",
+    xjcLibs := Seq(
+      "org.glassfish.jaxb" % "jaxb-xjc" % "2.2.11",
+      "com.sun.xml.bind" % "jaxb-impl" % "2.2.11",
+      "javax.activation" % "activation" % "1.1.1",
+    ),
+    xjcJvmOpts ++= extraJvmOptions,
+    Compile / xjc / sources := Seq(
+      file("daffodil-lib/src/main/resources/org/apache/daffodil/xsd/tdml-core.xsd"),
+    ),
+    Compile / doc / sources := Seq(file("")),
+  )
+
 lazy val commonSettings = Seq(
   organization := "org.apache.daffodil",
   version := "3.6.0-SNAPSHOT",
@@ -241,6 +279,10 @@ lazy val commonSettings = Seq(
   resourceManaged := baseDirectory.value / "resource_managed",
   libraryDependencies ++= Dependencies.common,
   testOptions += Tests.Argument(TestFrameworks.JUnit, "-q", "--verbosity=1"),
+  // SbtXjcPlugin is enabled globally, and will, be default, attempt to build xsd schemas if any exist in a project
+  // these lines overwrite that and tell it that there are no xsd scehmas to build
+  Compile / xjc / sources := Seq(),
+  Test / xjc / sources := Seq(),
 )
 
 def buildScalacOptions(scalaVersion: String) = {
