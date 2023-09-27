@@ -214,21 +214,6 @@ lazy val testStdLayout = Project("daffodil-test-stdLayout", file("test-stdLayout
   .dependsOn(tdmlProc % "test")
   .settings(commonSettings, nopublish)
 
-/* Workaround: certain reflection (used by JAXB) isn't allowed by default in JDK 17:
- * https://docs.oracle.com/en/java/javase/17/migrate/migrating-jdk-8-later-jdk-releases.html#GUID-7BB28E4D-99B3-4078-BDC4-FC24180CE82B
- *
- * While we can handle this JVM quirk at build time, at runtime we won't know
- * a user's JVM version. We'll provide documentation and an extension setting
- * to add these flags to the extension-launched debugger backend.
- */
-lazy val extraJvmOptions: Seq[String] =
-  if (scala.util.Properties.isJavaAtLeast("17"))
-    Seq(
-      "--add-opens",
-      "java.base/java.lang=ALL-UNNAMED",
-    )
-  else Seq()
-
 lazy val xjcSettings =
   Seq(
     libraryDependencies ++= Seq(
@@ -246,7 +231,19 @@ lazy val xjcSettings =
       "com.sun.xml.bind" % "jaxb-impl" % "2.2.11",
       "javax.activation" % "activation" % "1.1.1",
     ),
-    xjcJvmOpts ++= extraJvmOptions,
+    xjcJvmOpts ++= 
+      /* Workaround: certain reflection (used by JAXB) isn't allowed by default in JDK 17:
+      * https://docs.oracle.com/en/java/javase/17/migrate/migrating-jdk-8-later-jdk-releases.html#GUID-7BB28E4D-99B3-4078-BDC4-FC24180CE82B
+      *
+      * While we can handle this JVM quirk at build time, at runtime we won't know
+      * a user's JVM version. We'll need to provide documentation about this.
+      */
+      (if (scala.util.Properties.isJavaAtLeast("17"))
+        Seq(
+          "--add-opens",
+          "java.base/java.lang=ALL-UNNAMED",
+        )
+      else Seq()),
     Compile / xjc / sources := Seq(
       // Need to refer to the individual files because we do not want XMLSchema to go through the JAXB compliation
       file("daffodil-lib/src/main/resources/org/apache/daffodil/xsd/tdml.xsd"),
