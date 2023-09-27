@@ -271,9 +271,7 @@ lazy val xjcSettings =
       ),
       file("daffodil-lib/src/main/resources/org/apache/daffodil/xsd/xml.xsd"),
       file("daffodil-lib/src/main/resources/org/apache/daffodil/xsd/XMLSchema_for_DFDL.xsd"),
-      // file("daffodil-lib/src/main/resources/org/apache/daffodil/xsd/XMLSchema.xsd")
-    ),
-    Compile / doc / sources := Seq(file("")),
+    )
   )
 
 lazy val commonSettings = Seq(
