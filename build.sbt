@@ -236,9 +236,7 @@ lazy val xjcSettings =
       "javax.activation" % "activation" % "1.1.1",
       "org.glassfish.jaxb" % "jaxb-xjc" % "2.2.11",
     ),
-    xjcCommandLine += "-nv",
-    xjcCommandLine += "-p",
-    xjcCommandLine += "org.apache.daffodil.tdml",
+    xjcCommandLine ++= Seq("-nv", "-p", "org.apache.daffodil.tdml"),
     xjcBindings += "daffodil-tdml-lib/src/main/resources/bindings.xjb",
     xjcLibs := Seq(
       "org.glassfish.jaxb" % "jaxb-xjc" % "2.2.11",
